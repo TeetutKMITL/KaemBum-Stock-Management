@@ -69,7 +69,7 @@ async function boot(){
   });
 }
 
-}
+
 function showLogin(){me=null;boot().catch(fail)}
 async function login(){const email=$('#email').value.trim(),password=$('#password').value; if(!email||!password)return toast('กรอกอีเมลและรหัสผ่านก่อน',true);const b=$('#login');b.disabled=true;b.textContent='กำลังเข้าสู่ระบบ…';const {data,error}=await sb.auth.signInWithPassword({email,password});b.disabled=false;b.textContent='เข้าสู่ระบบ';if(error)return fail(error);try{await enter(data.user)}catch(e){fail(e)}}
 async function enter(user){const {data,error}=await sb.from('profiles').select('id,display_name,role').eq('id',user.id).single();if(error)throw error;if(!data||!['ceo','employee'].includes(data.role))throw new Error('บัญชีนี้ยังไม่มีสิทธิ์ใช้งาน');me={...data,email:user.email};await loadAll();render()}
