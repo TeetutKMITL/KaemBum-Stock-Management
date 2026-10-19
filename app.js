@@ -1,4 +1,4 @@
-(() => {
+(() => { // PUBLISH-CHECK-20261019
 'use strict';
 // Public/publishable key is intended for browser use. Never put service_role keys here.
 const SUPABASE_URL = 'https://gkuclyokfvythmkbkzxa.supabase.co';
