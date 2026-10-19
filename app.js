@@ -58,15 +58,13 @@ async function boot(){
     fail(e);
   }
 
-  sb.auth.onAuthStateChange((_event,session)=>{
-    if(session&&!me){
-      setTimeout(()=>enter(session.user).catch(fail),0);
-    }else if(!session){
-      me=null;
-      $('#app').innerHTML='';
-      showLogin();
+
+  sb.auth.onAuthStateChange((_event, session) => {
+    if (session && !me) {
+      setTimeout(() => enter(session.user).catch(fail), 0);
     }
   });
+
 }
 
 
