@@ -29,88 +29,17 @@ async function loadAll(){
  locations.forEach(l=>{l.key=l.name==='หน้าร้าน'?'central':l.name==='Facebook'?'facebook':l.name==='TikTok Shop'?'tiktok':l.name==='Shopee'?'shopee':l.name});
 }
 async function boot(){
- $('#app').innerHTML='<div class="login-wrap"><section class="login-card"><h1>แก้มบุ๋ม เพ-ลาเล่น</h1><p>ระบบจัดการสต็อกออนไลน์</p><div class="field">
-  <label>ชื่อผู้ใช้</label>
-  <input id="email" type="text" autocomplete="username" class="input" required>
-</div><div class="field"><label>รหัสผ่าน</label><input id="password" type="password" autocomplete="current-password" class="input" required></div><button id="login" class="btn btn-primary btn-block">เข้าสู่ระบบ</button><p class="muted">ใช้บัญชีที่ผู้ดูแลสร้างไว้ใน Supabase</p></section></div>';
+ $('#app').innerHTML='<div class="login-wrap"><section class="login-card"><h1>แก้มบุ๋ม เพ-ลาเล่น</h1><p>ระบบจัดการสต็อกออนไลน์</p><div class="field"><label>อีเมล</label><input id="email" type="email" autocomplete="username" class="input" required></div><div class="field"><label>รหัสผ่าน</label><input id="password" type="password" autocomplete="current-password" class="input" required></div><button id="login" class="btn btn-primary btn-block">เข้าสู่ระบบ</button><p class="muted">ใช้บัญชีที่ผู้ดูแลสร้างไว้ใน Supabase</p></section></div>';
  $('#login').onclick=login; $('#password').onkeydown=e=>{if(e.key==='Enter')login()};
  const {data:{session},error}=await sb.auth.getSession();if(error)fail(error); if(session) await enter(session.user);
- 
-sb.auth.onAuthStateChange((_event, session) => {
-  if (session && !me) {
-    setTimeout(() => enter(session.user).catch(fail), 0);
-  }
-});
-
+ sb.auth.onAuthStateChange((_event,session)=>{if(session&&!me) setTimeout(()=>enter(session.user).catch(fail),0);else if(!session){me=null;showLogin()}})
 }
 function showLogin(){me=null;boot().catch(fail)}
-async function login() {
-  const username = $('#email').value.trim();
-  const password = $('#password').value;
-
-  if (!username || !password) {
-    return toast('กรอกชื่อผู้ใช้และรหัสผ่านก่อน', true);
-  }
-
-  const b = $('#login');
-  b.disabled = true;
-  b.textContent = 'กำลังเข้าสู่ระบบ…';
-
-  try {
-    const response = await fetch(
-      `${SUPABASE_URL}/functions/v1/swift-service`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': SUPABASE_ANON_KEY
-        },
-        body: JSON.stringify({
-          action: 'login',
-          username,
-          password
-        })
-      }
-    );
-
-    const result = await response.json();
-
-    if (!response.ok) {
-      throw new Error(result.error || 'เข้าสู่ระบบไม่สำเร็จ');
-    }
-
-    const { access_token, refresh_token } = result;
-
-    if (!access_token || !refresh_token) {
-      throw new Error('ระบบไม่ได้ส่ง Token กลับมา');
-    }
-
-    const { data, error } = await sb.auth.setSession({
-      access_token,
-      refresh_token
-    });
-
-    if (error) throw error;
-
-    await enter(data.user);
-  } catch (error) {
-    fail(error);
-  } finally {
-    b.disabled = false;
-    b.textContent = 'เข้าสู่ระบบ';
-  }
-}
+async function login(){const email=$('#email').value.trim(),password=$('#password').value; if(!email||!password)return toast('กรอกอีเมลและรหัสผ่านก่อน',true);const b=$('#login');b.disabled=true;b.textContent='กำลังเข้าสู่ระบบ…';const {data,error}=await sb.auth.signInWithPassword({email,password});b.disabled=false;b.textContent='เข้าสู่ระบบ';if(error)return fail(error);try{await enter(data.user)}catch(e){fail(e)}}
 async function enter(user){const {data,error}=await sb.from('profiles').select('id,display_name,role').eq('id',user.id).single();if(error)throw error;if(!data||!['ceo','employee'].includes(data.role))throw new Error('บัญชีนี้ยังไม่มีสิทธิ์ใช้งาน');me={...data,email:user.email};await loadAll();render()}
 function shell(){return `<div class="app-shell"><aside class="sidebar"><div class="brand"><img class="brand-logo" src="assets/logo.png" alt="โลโก้ร้านแก้มบุ๋ม เพ-ลาเล่น"><div><b>แก้มบุ๋ม เพ-ลาเล่น</b><small>STOCK MANAGEMENT</small></div></div><nav>${[['dashboard','▦','ภาพรวม'],['products','▣','สินค้า'],['stock','▤','สต็อกแยกช่องทาง'],['receive','＋','รับสินค้าเข้า'],['transfer','⇄','โอนสต็อก'],['sale','↘','ขายออก'],['adjust','±','ปรับสต็อก'],['history','☷','ประวัติ']].map(([k,i,t])=>`<button class="nav-item ${page===k?'active':''}" data-page="${k}"><span>${i}</span>${t}</button>`).join('')}</nav><div class="sidebar-bottom"><div class="user-chip"><b>${esc(me.display_name||me.email)}</b><small>${isCEO()?'CEO / ผู้ดูแลระบบ':'พนักงาน'}</small></div><button class="btn btn-block" id="logout">ออกจากระบบ</button></div></aside><main class="main"><header class="topbar"><div><b>${esc(pageTitle())}</b><small>ข้อมูลออนไลน์จาก Supabase</small></div><div class="topbar-actions"><button class="btn" id="export-data">⇩ Export</button><button class="btn" id="refresh">↻ รีเฟรช</button></div></header><div class="content" id="content"></div></main></div>`}
 function pageTitle(){return ({dashboard:'ภาพรวมสต็อก',products:'รายการสินค้า',stock:'สต็อกแยกช่องทาง',receive:'รับสินค้าเข้า',transfer:'โอนสต็อก',sale:'บันทึกขายออก',adjust:'ปรับสต็อก',history:'ประวัติการเคลื่อนไหว'})[page]||'สต็อก'}
-function render(){ $('#app').innerHTML=shell(); document.querySelectorAll('[data-page]').forEach(b=>b.onclick=()=>{page=b.dataset.page;render()});
-$('#logout').onclick = async () => {
-  const { error } = await sb.auth.signOut();
-  if (error) return fail(error);
-  me = null;
-  window.location.reload();
-};
-$('#refresh').onclick=async()=>{try{await loadAll();render();toast('อัปเดตข้อมูลแล้ว')}catch(e){fail(e)}};$('#export-data').onclick=exportData;const c=$('#content');({dashboard:dashboard,products:productPage,stock:stockPage,receive:()=>movementForm('receive'),transfer:()=>movementForm('transfer'),sale:()=>movementForm('sale'),adjust:()=>movementForm('adjustment'),history:historyPage})[page](c)}
+function render(){ $('#app').innerHTML=shell(); document.querySelectorAll('[data-page]').forEach(b=>b.onclick=()=>{page=b.dataset.page;render()});$('#logout').onclick=async()=>{await sb.auth.signOut();showLogin()};$('#refresh').onclick=async()=>{try{await loadAll();render();toast('อัปเดตข้อมูลแล้ว')}catch(e){fail(e)}};$('#export-data').onclick=exportData;const c=$('#content');({dashboard:dashboard,products:productPage,stock:stockPage,receive:()=>movementForm('receive'),transfer:()=>movementForm('transfer'),sale:()=>movementForm('sale'),adjust:()=>movementForm('adjustment'),history:historyPage})[page](c)}
 function head(title,desc,extra=''){return `<div class="page-head"><div><h1>${title}</h1><p>${desc}</p></div>${extra}</div>`}
 function dashboard(el){const sum=products.filter(p=>p.active).reduce((a,p)=>a+total(p),0);const lowProducts=products.filter(p=>p.active&&total(p)<=Number(p.threshold||3));const low=lowProducts.length;el.innerHTML=head('ภาพรวมสต็อก','ยอดล่าสุดจากฐานข้อมูลกลาง')+`<div class="stats-grid"><div class="stat-card"><span>สินค้าเปิดใช้งาน</span><strong>${num(products.filter(p=>p.active).length)}</strong><small>SKU</small></div><div class="stat-card"><span>สต็อกรวมทุกช่องทาง</span><strong>${num(sum)}</strong><small>ชิ้น</small></div><div class="stat-card"><span>รายการสต็อกต่ำ/หมด</span><strong>${num(low)}</strong><small>สินค้า</small></div><div class="stat-card"><span>ประวัติล่าสุด</span><strong>${num(movements.length)}</strong><small>รายการที่โหลด</small></div></div><div class="card"><h2>ยอดแยกช่องทาง</h2>${locations.map(l=>`<div class="confirm-row"><span>${esc(l.name)}</span><strong>${num(products.reduce((s,p)=>s+qty(p.id,l.id),0))} ชิ้น</strong></div>`).join('')}</div><div class="card"><h2>รายการสินค้าสต็อกต่ำ/หมด (${num(lowProducts.length)} รายการ)</h2>${lowProducts.length?productTable(lowProducts):'<div class="empty">ไม่มีสินค้าที่สต็อกต่ำหรือหมด</div>'}</div><div class="card"><h2>รายการเคลื่อนไหวล่าสุด</h2>${movementTable(movements.slice(0,8))}</div>`}
 function productPage(el){const cats=[...new Set(products.map(p=>p.category).filter(Boolean))].sort((a,b)=>String(a).localeCompare(String(b),'th'));el.innerHTML=head('รายการสินค้า','ข้อมูลสินค้าอ่านจาก Supabase โดยตรง')+`<div class="card"><div class="toolbar"><input class="input" id="q" placeholder="ค้นหา SKU / รหัสขาย / ชื่อสินค้า" autocomplete="off"><select class="select filter-select" id="category-filter"><option value="">หมวดหมู่ทั้งหมด</option>${cats.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('')}</select><select class="select filter-select" id="sort-by"><option value="sku">เรียงตาม SKU</option><option value="name">ชื่อสินค้า A-Z</option><option value="stock-high">สต็อกมากไปน้อย</option><option value="stock-low">สต็อกน้อยไปมาก</option></select><span class="muted" id="product-count">${products.length} รายการ</span></div><div class="suggestions" id="search-suggestions"></div><div id="product-table">${productTable(products)}</div></div>`;const update=()=>{const q=$('#q').value.trim().toLowerCase(),cat=$('#category-filter').value,sort=$('#sort-by').value;let list=products.filter(p=>(!q||[p.sku,p.vrich_code,p.name,p.category,p.size].some(x=>String(x||'').toLowerCase().includes(q)))&&(!cat||p.category===cat));list.sort((a,b)=>sort==='name'?String(a.name||'').localeCompare(String(b.name||''),'th'):sort==='stock-high'?total(b)-total(a):sort==='stock-low'?total(a)-total(b):String(a.sku||'').localeCompare(String(b.sku||''),undefined,{numeric:true}));$('#product-count').textContent=list.length+' รายการ';$('#product-table').innerHTML=productTable(list);const sug=$('#search-suggestions');if(q){const matches=list.slice(0,8);sug.innerHTML=matches.length?matches.map(p=>`<button type="button" class="suggestion-item" data-sku="${esc(p.sku)}"><b>${esc(p.sku)}</b> · ${esc(p.name)} <small>${esc(p.category||'')}</small></button>`).join(''):'<div class="suggestion-empty">ไม่พบสินค้าที่ตรงกัน</div>';sug.querySelectorAll('[data-sku]').forEach(b=>b.onclick=()=>{$('#q').value=b.dataset.sku;update();sug.innerHTML='';});}else sug.innerHTML='';};$('#q').oninput=update;$('#category-filter').onchange=update;$('#sort-by').onchange=update;}
