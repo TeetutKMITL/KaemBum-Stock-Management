@@ -28,11 +28,47 @@ async function loadAll(){
  products=pr.data||[]; locations=lo.data||[]; balances=ba.data||[]; movements=mv.data||[];
  locations.forEach(l=>{l.key=l.name==='หน้าร้าน'?'central':l.name==='Facebook'?'facebook':l.name==='TikTok Shop'?'tiktok':l.name==='Shopee'?'shopee':l.name});
 }
+
 async function boot(){
- $('#app').innerHTML='<div class="login-wrap"><section class="login-card"><h1>แก้มบุ๋ม เพ-ลาเล่น</h1><p>ระบบจัดการสต็อกออนไลน์</p><div class="field"><label>อีเมล</label><input id="email" type="email" autocomplete="username" class="input" required></div><div class="field"><label>รหัสผ่าน</label><input id="password" type="password" autocomplete="current-password" class="input" required></div><button id="login" class="btn btn-primary btn-block">เข้าสู่ระบบ</button><p class="muted">ใช้บัญชีที่ผู้ดูแลสร้างไว้ใน Supabase</p></section></div>';
- $('#login').onclick=login; $('#password').onkeydown=e=>{if(e.key==='Enter')login()};
- const {data:{session},error}=await sb.auth.getSession();if(error)fail(error); if(session) await enter(session.user);
- sb.auth.onAuthStateChange((_event,session)=>{if(session&&!me) setTimeout(()=>enter(session.user).catch(fail),0);else if(!session){me=null;showLogin()}})
+  $('#app').innerHTML='<div class="login-wrap"><section class="login-card"><h1>แก้มบุ๋ม เพ-ลาเล่น</h1><p>ระบบจัดการสต็อกออนไลน์</p><div class="field"><label>อีเมล</label><input id="email" type="email" autocomplete="username" class="input" required></div><div class="field"><label>รหัสผ่าน</label><input id="password" type="password" autocomplete="current-password" class="input" required></div><button id="login" class="btn btn-primary btn-block">เข้าสู่ระบบ</button><p class="muted">ใช้บัญชีที่ผู้ดูแลสร้างไว้ใน Supabase</p></section></div>';
+
+  $('#login').onclick=login;
+  $('#password').onkeydown=e=>{if(e.key==='Enter')login()};
+
+  // ตรวจ Session โดยไม่ปล่อยให้คำขอค้างตลอดไป
+  let timedOut=false;
+  const timeout=new Promise(resolve=>{
+    setTimeout(()=>{timedOut=true;resolve(null)},8000);
+  });
+
+  try{
+    const result=await Promise.race([
+      sb.auth.getSession(),
+      timeout
+    ]);
+
+    if(timedOut){
+      toast('ตรวจสอบการเชื่อมต่อล่าช้า กรุณาลองเข้าสู่ระบบ',true);
+    }else if(result.error){
+      fail(result.error);
+    }else if(result.data?.session){
+      await enter(result.data.session.user);
+    }
+  }catch(e){
+    fail(e);
+  }
+
+  sb.auth.onAuthStateChange((_event,session)=>{
+    if(session&&!me){
+      setTimeout(()=>enter(session.user).catch(fail),0);
+    }else if(!session){
+      me=null;
+      $('#app').innerHTML='';
+      showLogin();
+    }
+  });
+}
+
 }
 function showLogin(){me=null;boot().catch(fail)}
 async function login(){const email=$('#email').value.trim(),password=$('#password').value; if(!email||!password)return toast('กรอกอีเมลและรหัสผ่านก่อน',true);const b=$('#login');b.disabled=true;b.textContent='กำลังเข้าสู่ระบบ…';const {data,error}=await sb.auth.signInWithPassword({email,password});b.disabled=false;b.textContent='เข้าสู่ระบบ';if(error)return fail(error);try{await enter(data.user)}catch(e){fail(e)}}
