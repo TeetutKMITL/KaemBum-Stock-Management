@@ -34,7 +34,14 @@ async function boot(){
  const {data:{session},error}=await sb.auth.getSession();if(error)fail(error); if(session) await enter(session.user);
  sb.auth.onAuthStateChange((_event,session)=>{if(session&&!me) setTimeout(()=>enter(session.user).catch(fail),0);else if(!session){me=null;showLogin()}})
 }
-function showLogin(){me=null;boot().catch(fail)}
+
+function showLogin(){
+  me=null;
+  $('#app').innerHTML='<div class="login-wrap"><section class="login-card"><h1>แก้มบุ๋ม เพ-ลาเล่น</h1><p>ระบบจัดการสต็อกออนไลน์</p><div class="field"><label>อีเมล</label><input id="email" type="email" autocomplete="username" class="input" required></div><div class="field"><label>รหัสผ่าน</label><input id="password" type="password" autocomplete="current-password" class="input" required></div><button id="login" class="btn btn-primary btn-block">เข้าสู่ระบบ</button><p class="muted">ใช้บัญชีที่ผู้ดูแลสร้างไว้ใน Supabase</p></section></div>';
+  $('#login').onclick=login;
+  $('#password').onkeydown=e=>{if(e.key==='Enter')login()};
+}
+
 async function login(){const email=$('#email').value.trim(),password=$('#password').value; if(!email||!password)return toast('กรอกอีเมลและรหัสผ่านก่อน',true);const b=$('#login');b.disabled=true;b.textContent='กำลังเข้าสู่ระบบ…';const {data,error}=await sb.auth.signInWithPassword({email,password});b.disabled=false;b.textContent='เข้าสู่ระบบ';if(error)return fail(error);try{await enter(data.user)}catch(e){fail(e)}}
 async function enter(user){const {data,error}=await sb.from('profiles').select('id,display_name,role').eq('id',user.id).single();if(error)throw error;if(!data||!['ceo','employee'].includes(data.role))throw new Error('บัญชีนี้ยังไม่มีสิทธิ์ใช้งาน');me={...data,email:user.email};await loadAll();render()}
 function shell(){return `<div class="app-shell"><aside class="sidebar"><div class="brand"><img class="brand-logo" src="assets/logo.png" alt="โลโก้ร้านแก้มบุ๋ม เพ-ลาเล่น"><div><b>แก้มบุ๋ม เพ-ลาเล่น</b><small>STOCK MANAGEMENT</small></div></div><nav>${[['dashboard','▦','ภาพรวม'],['products','▣','สินค้า'],['stock','▤','สต็อกแยกช่องทาง'],['receive','＋','รับสินค้าเข้า'],['transfer','⇄','โอนสต็อก'],['sale','↘','ขายออก'],['adjust','±','ปรับสต็อก'],['history','☷','ประวัติ']].map(([k,i,t])=>`<button class="nav-item ${page===k?'active':''}" data-page="${k}"><span>${i}</span>${t}</button>`).join('')}</nav><div class="sidebar-bottom"><div class="user-chip"><b>${esc(me.display_name||me.email)}</b><small>${isCEO()?'CEO / ผู้ดูแลระบบ':'พนักงาน'}</small></div><button class="btn btn-block" id="logout">ออกจากระบบ</button></div></aside><main class="main"><header class="topbar"><div><b>${esc(pageTitle())}</b><small>ข้อมูลออนไลน์จาก Supabase</small></div><div class="topbar-actions"><button class="btn" id="export-data">⇩ Export</button><button class="btn" id="refresh">↻ รีเฟรช</button></div></header><div class="content" id="content"></div></main></div>`}
