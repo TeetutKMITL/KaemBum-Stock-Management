@@ -16,3 +16,16 @@
 
 /* Restored legacy UI features */
 .brand-logo{width:48px;height:52px;object-fit:contain;flex:0 0 auto;border-radius:8px;background:#fff}.topbar-actions{display:flex;gap:8px;align-items:center}.filter-select{max-width:230px}.suggestions{display:grid;gap:4px;margin:-6px 0 12px;max-width:720px}.suggestion-item{display:block;width:100%;text-align:left;padding:9px 12px;border:1px solid #e5e7eb;border-radius:8px;background:#fff;color:#111827;cursor:pointer}.suggestion-item:hover{background:#f3f4f6;border-color:#9ca3af}.suggestion-item small{display:block;color:#6b7280;margin-top:3px}.suggestion-empty{padding:10px;color:#6b7280;font-size:13px}.operation-card .suggestions{margin-top:-10px}
+
+
+/* Export choices modal */
+.export-modal{width:min(620px,100%)}
+.export-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.export-card{min-height:112px;padding:16px;border:1px solid #e5e7eb;text-align:left;align-items:flex-start;justify-content:flex-start;white-space:normal}
+.export-card strong{font-size:15px;color:#111827}
+.export-card span{font-size:13px;line-height:1.5;color:#6b7280;font-weight:500}
+.export-warning{margin:16px 0 0;line-height:1.5}
+@media(max-width:520px){.export-options{grid-template-columns:1fr}.export-card{min-height:86px}}
+
+/* Logo asset fix: load the bundled SVG logo consistently on GitHub Pages */
+.brand-logo{width:60px;height:60px;object-fit:contain;flex:0 0 60px;border-radius:10px;background:#111827;display:block}
